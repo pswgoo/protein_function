@@ -1,4 +1,5 @@
 set(SRCS
+	evaluation.h
 	evaluation.cpp
 )
 
