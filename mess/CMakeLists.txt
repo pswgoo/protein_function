@@ -1,0 +1,3 @@
+
+add_subdirectory(mess_parse_go_data_main)
+add_subdirectory(mess_blast_predict_main)
