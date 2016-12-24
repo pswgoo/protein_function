@@ -78,7 +78,54 @@ vector<BlastPredictInstance> ParseBlastPredictResult(const std::string& filename
 		string id = test_set[i].id_;
 		if (read_instances.count(id) > 0) {
 			ret_instances.push_back(read_instances.at(id));
+		}
+		else {
+			BlastPredictInstance tmp;
+			tmp.protein_ = id;
+			ret_instances.push_back(tmp);
+			clog << "Error: " << id << " cannot found blast prediction" << endl;
+		}
+	}
+	return ret_instances;
+}
 
+vector<BlastPredictInstance> ParseBlastPredictXmlResult(const std::string& xml_file, const ProteinSet& test_set) {
+	using namespace boost::property_tree;
+	ptree rt_tree;
+	try {
+		read_xml(xml_file, rt_tree);
+	}
+	catch (const std::exception& e) {
+		cerr << "Error: " << e.what() << endl;
+		return{};
+	}
+
+	ptree iter_tree = rt_tree.get_child("BlastOutput.BlastOutput_iterations");
+
+	unordered_map<string, BlastPredictInstance> read_instances;
+	BOOST_FOREACH(const ptree::value_type& u, iter_tree) {
+		if (u.first == "Iteration") {
+			BlastPredictInstance instance;
+			instance.protein_ = u.second.get<string>("Iteration_query-def");
+			BOOST_FOREACH(const ptree::value_type& v, iter_tree.get_child("Iteration.Iteration_hits")) {
+				if (v.first == "Hit") {
+					string neibo_id = v.second.get<string>("Hit_id");
+					double bit_score = v.second.get<double>("Hit_hsps.Hsp.Hsp_bit-score");
+					double evalue = v.second.get<double>("Hit_hsps.Hsp.Hsp_evalue");
+					instance.similar_proteins_.push_back(neibo_id);
+					instance.similar_bitscore_.push_back(bit_score);
+					instance.similar_evalues_.push_back(evalue);
+				}
+			}
+			read_instances[instance.protein_] = instance;
+		}
+	}
+
+	vector<BlastPredictInstance> ret_instances;
+	for (int i = 0; i < test_set.Size(); ++i) {
+		string id = test_set[i].id_;
+		if (read_instances.count(id) > 0) {
+			ret_instances.push_back(read_instances.at(id));
 		}
 		else {
 			BlastPredictInstance tmp;
@@ -184,6 +231,7 @@ int main() {
 	test_set.Load(kTestProteinSetFile);
 
 	vector<BlastPredictInstance> blast_result = ParseBlastPredictResult(kBlastPredictFile, test_set);
+	//vector<BlastPredictInstance> blast_result = ParseBlastPredictXmlResult(kBlastPredictFile, test_set);
 	clog << "Total load " << blast_result.size() << " blast results" << endl;
 
 	for (int go_type = MF; go_type < GO_TYPE_SIZE; ++go_type) {
