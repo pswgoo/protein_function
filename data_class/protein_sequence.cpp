@@ -23,7 +23,7 @@ AminoType GetAminoType(const std::string &x) {
 }
 
 void ProteinSet::Save(const std::string& file_name) const {
-	ofstream fout(file_name);
+	ofstream fout(file_name, ios_base::binary);
 	boost::archive::binary_oarchive oa(fout);
 	oa << *this;
 	fout.close();
@@ -33,7 +33,7 @@ int ProteinSet::Load(const std::string& file_name) {
 	protein_indices_.clear();
 	proteins_.clear();
 
-	ifstream fin(file_name);
+	ifstream fin(file_name, ios_base::binary);
 	boost::archive::binary_iarchive ia(fin);
 	ia >> *this;
 	clog << "Total load " << proteins_.size() << " go terms!" << endl;
@@ -47,7 +47,7 @@ std::string RemoveSpace(const std::string& str) {
 	return ret;
 }
 
-int ProteinSet::ParseRawTxt(const std::string & sequence_file, const std::string & mf_go_file, const std::string & bp_go_file, const std::string & cc_go_file) {
+int ProteinSet::ParseRawTxt(const std::string & sequence_file, const std::string & mf_go_file, const std::string & bp_go_file, const std::string & cc_go_file, bool only_left_indexed) {
 	ifstream fin(sequence_file);
 
 	string line;
@@ -84,7 +84,8 @@ int ProteinSet::ParseRawTxt(const std::string & sequence_file, const std::string
 	for (int i = 0; i < proteins_.size(); ++i)
 		if (!proteins_[i].go_terms_[MF].empty() || !proteins_[i].go_terms_[BP].empty() || !proteins_[i].go_terms_[CC].empty())
 			indexed_proteins.push_back(proteins_[i]);
-	set_proteins(indexed_proteins);
+	if (only_left_indexed)
+		set_proteins(indexed_proteins);
 	clog << "Total parsed " << parsed_cnt << " proteins, " << proteins_.size() << " have go terms" << endl;
 	return (int)proteins_.size();
 }

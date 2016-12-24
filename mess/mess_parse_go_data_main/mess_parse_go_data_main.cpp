@@ -20,7 +20,7 @@ int main() {
 	go_term_set.Save("go_160601.gotermset");
 
 	ProteinSet train_set;
-	train_set.ParseRawTxt("C:/psw/cafa/CAFA3/train.fasta", "C:/psw/cafa/CAFA3/train_mf.txt", "C:/psw/cafa/CAFA3/train_bp.txt", "C:/psw/cafa/CAFA3/train_cc.txt");
+	train_set.ParseRawTxt("C:/psw/cafa/CAFA3/train.fasta", "C:/psw/cafa/CAFA3/train_mf.txt", "C:/psw/cafa/CAFA3/train_bp.txt", "C:/psw/cafa/CAFA3/train_cc.txt", false);
 	train_set.Save("cafa3_train_161222.proteinset");
 
 	ProteinSet test_set;

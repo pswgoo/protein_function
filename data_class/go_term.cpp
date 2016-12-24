@@ -67,7 +67,7 @@ size_t GOTermSet::ParseGo(const std::string& go_file) {
 }
 
 void GOTermSet::Save(const std::string& file_name) const {
-	ofstream fout(file_name);
+	ofstream fout(file_name, ios_base::binary);
 	boost::archive::binary_oarchive oa(fout);
 	oa << *this;
 	fout.close();
@@ -75,8 +75,9 @@ void GOTermSet::Save(const std::string& file_name) const {
 
 size_t GOTermSet::Load(const std::string& file_name) {
 	go_terms_.clear();
+	go_term_index_.clear();
 
-	ifstream fin(file_name);
+	ifstream fin(file_name, ios_base::binary);
 	boost::archive::binary_iarchive ia(fin);
 	ia >> *this;
 	clog << "Total load " << go_terms_.size() << " go terms!" << endl;
@@ -88,20 +89,23 @@ std::vector<int> GOTermSet::FindAncestors(const std::vector<int>& go_term_ids) c
 	unordered_set<int> ancestors;
 	queue<int> que;
 	for (int g : go_term_ids) {
-		if (ancestors.count(g) == 0)
+		if (ancestors.count(g) == 0 && HasKey(g)) {
 			que.push(g);
-		ancestors.insert(g);
+			ancestors.insert(g);
+		}
 	}
 	while(!que.empty()) {
 		int top = que.front();
 		que.pop();
 		if (HasKey(top)) {
 			for (int f : QueryGOTerm(top).fathers())
-				if (ancestors.count(f) == 0) {
+				if (ancestors.count(f) == 0 && HasKey(f) && !QueryGOTerm(f).fathers().empty()) {
 					que.push(f);
 					ancestors.insert(f);
 				}
 		}
+		else
+			clog << "Warning: " << top << " cannot find in go_set" << endl;
 	}
 	vector<int> ret_ancestor;
 	for (int a : ancestors)

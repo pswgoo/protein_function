@@ -41,7 +41,7 @@ public:
 private:
 	friend boost::serialization::access;
 	template<typename Archive>
-	void serialize(Archive& ar, const unsigned int version) {
+	void serialize(Archive& ar, const unsigned int/* version*/) {
 		ar & id_  & alt_ids_ & name_ & fathers_ & type_;
 	}
 
@@ -93,8 +93,8 @@ public:
 private:
 	friend boost::serialization::access;
 	template<typename Archive>
-	void serialize(Archive& ar, const unsigned int version) {
-		ar & update_date_ & go_term_index_ & go_terms_;
+	void serialize(Archive& ar, const unsigned int /* version*/) {
+		ar & update_date_ & go_terms_ & go_term_index_;
 	}
 
 private:

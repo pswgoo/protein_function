@@ -37,7 +37,7 @@ inline char Get1LetterAminoName(AminoType type) {
 	return kTypeChar[type];
 }
 
-enum GoType {MF, BP, CC};
+enum GoType {MF, BP, CC, GO_TYPE_SIZE};
 const std::string kGoTypeStr[] = { "molecular_function", "biological_process", "cellular_component" };
 
 struct Protein {
@@ -54,7 +54,7 @@ struct Protein {
 
 	Protein() = default;
 	Protein(const std::string& id, const std::string& sequence) : id_(id), sequence_(sequence) {
-		go_terms_.resize(GoType::CC + 1);
+		go_terms_.resize(GoType::GO_TYPE_SIZE);
 	}
 
 	std::string id_;
@@ -67,14 +67,14 @@ class ProteinSet {
 public:
 	std::vector<Protein> proteins() { return proteins_; }
 
-	bool Has(const std::string& id) { return protein_indices_.count(id) > 0; }
+	bool Has(const std::string& id) const { return protein_indices_.count(id) > 0; }
 
 	int Size() const { return (int)proteins_.size(); }
 
 	const Protein& operator[](const std::string& id) const { return proteins_[protein_indices_.at(id)]; }
 	const Protein& operator[](int idx) const { return proteins_[idx]; }
 
-	int ParseRawTxt(const std::string& sequence_file, const std::string& mf_go_file, const std::string& bp_go_file, const std::string& cc_go_file);
+	int ParseRawTxt(const std::string& sequence_file, const std::string& mf_go_file, const std::string& bp_go_file, const std::string& cc_go_file, bool only_left_indexed = true);
 
 	void Save(const std::string& file_name) const;
 
