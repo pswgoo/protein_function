@@ -100,7 +100,7 @@ vector<BlastPredictInstance> ParseBlastPredictResult(const std::string& filename
 vector<BlastPredictInstance> ParseBlastPredictXmlResult(const std::string& xml_file, const ProteinSet& test_set) {
 	using namespace boost::property_tree;
 	vector<BlastPredictInstance> ret_instances;
-	
+	/*
 	ptree rt_tree;
 	try {
 		read_xml(xml_file, rt_tree);
@@ -135,7 +135,6 @@ vector<BlastPredictInstance> ParseBlastPredictXmlResult(const std::string& xml_f
 		}
 	}
 
-	
 	for (int i = 0; i < test_set.Size(); ++i) {
 		string id = test_set[i].id_;
 		if (read_instances.count(id) > 0) {
@@ -152,12 +151,12 @@ vector<BlastPredictInstance> ParseBlastPredictXmlResult(const std::string& xml_f
 	ofstream fout("yrh_xml_result.bin", ios_base::binary);
 	boost::archive::binary_oarchive oa(fout);
 	oa << ret_instances;
-	fout.close();
-	/*
+	fout.close();*/
+	
 	ifstream fin("yrh_xml_result.bin", ios_base::binary);
 	boost::archive::binary_iarchive ia(fin);
 	ia >> ret_instances;
-	fin.close();*/
+	fin.close();
 
 	return ret_instances;
 }
@@ -170,25 +169,28 @@ double EvalueToScore(double evalue) {
 }
 
 MultiLabelPredictAnswer BlastPredict(const ProteinSet& train_set, const GOTermSet& goterm_set, const BlastPredictInstance& test_instance, GoType go_type) {
-	unordered_map<int, double> label_score;
+	unordered_map<string, double> max_sim_score;
 	for (size_t i = 0; i < test_instance.similar_proteins_.size(); ++i) {
-		if (train_set.Has(test_instance.similar_proteins_[i])) {
-			const Protein &protein = train_set[test_instance.similar_proteins_[i]];
-			/*if (test_instance.protein_ == "Q7K0A0" && go_type == MF) {
-				clog << "Q7K0A0 Neibo: " << test_instance.similar_proteins_[i] << endl;
-				clog << "Indexed go: " << protein.go_term(go_type).size() << endl;
-			}*/
-			double score = EvalueToScore(test_instance.similar_evalues_[i]);
+		if (max_sim_score.count(test_instance.similar_proteins_[i]) == 0)
+			max_sim_score[test_instance.similar_proteins_[i]] = numeric_limits<double>::lowest();
+		double &ref_score = max_sim_score[test_instance.similar_proteins_[i]];
+		double score = EvalueToScore(test_instance.similar_evalues_[i]);
+		ref_score = max(ref_score, score);
+	}
+	unordered_map<int, double> label_score;
+	for (auto it = max_sim_score.begin(); it != max_sim_score.end(); ++it) {
+		if (train_set.Has(it->first)) {
+			const Protein &protein = train_set[it->first];
 			vector<int> go_leaves = protein.go_term(go_type);
 			for (int go_id : goterm_set.FindAncestors(go_leaves)) {
 				if (label_score.count(go_id) == 0)
-					label_score[go_id] = score;
+					label_score[go_id] = it->second;
 				else
-					label_score[go_id] = max(label_score[go_id], score);
+					label_score[go_id] += it->second;
 			}
 		}
 		else
-			clog << "Warning: " << test_instance.similar_proteins_[i] << " cannot found in trainset" << endl;
+			clog << "Warning: " << it->first << " cannot found in trainset" << endl;
 	}
 	MultiLabelPredictAnswer answer;
 	for (auto pr : label_score)
@@ -421,7 +423,7 @@ void AlignEvaluationZZH(string group_name) {
 
 int main() {
 	//const string kWorkDir = "D:/workspace/cafa/work/";
-	const string kWorkDir = "C:/psw/cafa/CAFA3/work/";
+	const string kWorkDir = "./"; // C:/psw/cafa/CAFA3/work/
 	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
 	const string kBlastPredictFile = kWorkDir + "group1_test_blast_iter3.txt";
 	const string kTrainProteinSetFile = kWorkDir + "cafa3_train_161222.proteinset";
@@ -442,8 +444,8 @@ int main() {
 	ProteinSet test_set;
 	test_set.Load(kTestProteinSetFile);
 
-	vector<BlastPredictInstance> blast_result = ParseBlastPredictResult(kBlastPredictFile, test_set);
-	//vector<BlastPredictInstance> blast_result = ParseBlastPredictXmlResult(kWorkDir + "a5a6187809ace29f9a9100619c0c94a3.xml", test_set);
+	//vector<BlastPredictInstance> blast_result = ParseBlastPredictResult(kBlastPredictFile, test_set);
+	vector<BlastPredictInstance> blast_result = ParseBlastPredictXmlResult(kWorkDir + "a5a6187809ace29f9a9100619c0c94a3.xml", test_set);
 	clog << "Total load " << blast_result.size() << " blast results" << endl;
 
 	for (int go_type = MF; go_type < GO_TYPE_SIZE; ++go_type) {
