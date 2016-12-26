@@ -36,7 +36,7 @@ int ProteinSet::Load(const std::string& file_name) {
 	ifstream fin(file_name, ios_base::binary);
 	boost::archive::binary_iarchive ia(fin);
 	ia >> *this;
-	clog << "Total load " << proteins_.size() << " go terms!" << endl;
+	clog << "Total load " << proteins_.size() << " proteins!" << endl;
 	fin.close();
 	return (int)proteins_.size();
 }
