@@ -23,7 +23,8 @@ std::pair<double, double> GetFMeasureMax(const std::vector<MultiLabelGoldAnswer>
 			mn = min(mn, pr.second);
 		}
 
-	double dist = (mx - mn) / 1000.0;
+	double dist = (mx - mn) / 100.0;
+	//mn = 0.0, mx = 1.0, dist = 0.01;
 	pair<double, double> ret(-1e10, -1);
 	for (double t = mn; t <= mx + EPS; t += dist) {
 		int m = 0;
@@ -39,10 +40,12 @@ std::pair<double, double> GetFMeasureMax(const std::vector<MultiLabelGoldAnswer>
 						++tp_cnt;
 				if (pos_cnt) {
 					++m;
+					//cout << tp_cnt << " : " << pos_cnt << endl;
 					sum_pre += double(tp_cnt) / pos_cnt;
 				}
 				sum_rec += double(tp_cnt) / gold_standard[i].size();
 			}
+	//	cout << t << " " << sum_pre << " " << m << " " << sum_rec << " " << n << endl;
 		double pr = sum_pre / m;
 		double rc = sum_rec / n;
 		if (pr + rc > 0) {

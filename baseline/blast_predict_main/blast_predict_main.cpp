@@ -100,7 +100,7 @@ vector<BlastPredictInstance> ParseBlastPredictResult(const std::string& filename
 vector<BlastPredictInstance> ParseBlastPredictXmlResult(const std::string& xml_file, const ProteinSet& test_set) {
 	using namespace boost::property_tree;
 	vector<BlastPredictInstance> ret_instances;
-	/*
+	
 	ptree rt_tree;
 	try {
 		read_xml(xml_file, rt_tree);
@@ -153,11 +153,11 @@ vector<BlastPredictInstance> ParseBlastPredictXmlResult(const std::string& xml_f
 	boost::archive::binary_oarchive oa(fout);
 	oa << ret_instances;
 	fout.close();
-	*/
+	/*
 	ifstream fin("yrh_xml_result.bin", ios_base::binary);
 	boost::archive::binary_iarchive ia(fin);
 	ia >> ret_instances;
-	fin.close();
+	fin.close();*/
 
 	return ret_instances;
 }
@@ -265,7 +265,8 @@ GoType GoTypeStrToTypeId(string type_str) {
 }
 
 void AlignEvaluation() {
-	const string kWorkDir = "D:/workspace/cafa/work/";
+	//const string kWorkDir = "D:/workspace/cafa/work/";
+	const string kWorkDir = "C:/psw/cafa/CAFA3/work/";
 	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
 	const string kBlastPredictFile = kWorkDir + "group1_test_blast_iter3.txt";
 	const string kTrainProteinSetFile = kWorkDir + "cafa3_train_161222.proteinset";
@@ -293,7 +294,7 @@ void AlignEvaluation() {
 		
 		int go_id = stoi(tokens[1].substr(3));
 		double score = stod(tokens[2]);
-		if (go_set.HasKey(go_id)) {
+		if (go_set.HasKey(go_id) && go_id != 8150 && go_id != 3674 && go_id != 5575) {
 			GoType type = GoTypeStrToTypeId(go_set.QueryGOTerm(go_id).type());
 			if (type == GO_TYPE_SIZE)
 				cerr << "Error: cannot found go type for " << go_id << endl;
@@ -301,7 +302,7 @@ void AlignEvaluation() {
 			++cnt;
 		}
 	}
-	clog << "Total load " << cnt << " scores" << endl;
+	clog << "Total load " << cnt << " blast scores" << endl;
 
 	for (int go_type = MF; go_type < GO_TYPE_SIZE; ++go_type) {
 		vector<MultiLabelGoldAnswer> gold_standard = GetGroundTruth(go_set, test_set, (GoType)(go_type));
@@ -328,22 +329,112 @@ void AlignEvaluation() {
 	system("pause");
 }
 
-int main() {
-	//const string kWorkDir = "D:/workspace/cafa/work/";
-	const string kWorkDir = "./";
+void AlignEvaluationZZH(string group_name) {
+	const string kWorkDir = "C:/psw/cafa/CAFA3/work/";
 	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
 	const string kBlastPredictFile = kWorkDir + "group1_test_blast_iter3.txt";
 	const string kTrainProteinSetFile = kWorkDir + "cafa3_train_161222.proteinset";
 	const string kTestProteinSetFile = kWorkDir + "cafa3_test_161222.proteinset";
 
-	AlignGoRelation();
-	return 0;
+	GOTermSet go_set;
+	go_set.Load(kGoTermSetFile);
+/*
+	for (int go_type = MF; go_type < GO_TYPE_SIZE; ++go_type) {
+		ofstream fout(kWorkDir + "evaluation_group12/" + kGoTypeStr[go_type] + ".txt");
+		for (int i = 0; i < go_set.go_terms().size(); ++i)
+			if (go_set.go_terms()[i].type() == kGoTypeStr[go_type]) {
+				char buffer[100];
+				sprintf(buffer, "GO:%07d", go_set.go_terms()[i].id());
+				fout << buffer << endl;
+			}
+	}
+
+	return ;*/
+
+	unordered_map<string, vector<MultiLabelPredictAnswer>> blast_predictions;
+	ifstream fin(kWorkDir + "evaluation_group12/" + group_name + "_result.txt");
+	string line;
+	int cnt = 0;
+	while (getline(fin, line)) {
+		vector<string> tokens;
+		split(tokens, line, boost::is_any_of("\t "));
+		if (blast_predictions.count(tokens[0]) == 0)
+			blast_predictions[tokens[0]].resize(GO_TYPE_SIZE);
+
+		int go_id = stoi(tokens[1].substr(3));
+		double score = stod(tokens[2]);
+		if (go_set.HasKey(go_id) && go_id != 8150 && go_id != 3674 && go_id != 5575) {
+			GoType type = GoTypeStrToTypeId(go_set.QueryGOTerm(go_id).type());
+			if (type == GO_TYPE_SIZE)
+				cerr << "Error: cannot found go type for " << go_id << endl;
+			blast_predictions[tokens[0]][type].push_back({ go_id, score });
+			++cnt;
+		}
+	}
+	clog << "Total load " << cnt << " scores" << endl;
+
+	vector<string> ground_truth_label_tail = { "_mfo.txt", "_bpo.txt", "_cco.txt" };
+	for (int go_type = MF; go_type < GO_TYPE_SIZE; ++go_type) {
+		string true_label_file = kWorkDir + "evaluation_group12/" + group_name + ground_truth_label_tail[go_type];
+		//string true_label_file = kWorkDir + "evaluation_group12/" + "group1_mfo_sub.txt";
+		unordered_map<string, MultiLabelGoldAnswer> ground_truth;
+		ifstream fin(true_label_file);
+		string name, go;
+		while (fin >> name >> go) {
+			int go_id = stoi(go.substr(3));
+			if (go_id != 8150 && go_id != 3674 && go_id != 5575)
+				ground_truth[name].insert(go_id);
+		}
+
+		vector<string> gold_protein_id;
+		vector<MultiLabelGoldAnswer> gold_standard;
+		for (auto it = ground_truth.begin(); it != ground_truth.end(); ++it) {
+			gold_standard.push_back(it->second);
+			gold_protein_id.push_back(it->first);
+		}
+
+		vector<MultiLabelPredictAnswer> prediction;
+		int no_label_cnt = 0;
+		for (int i = 0; i < gold_standard.size(); ++i) {
+			if (blast_predictions.count(gold_protein_id[i]) > 0 && !blast_predictions[gold_protein_id[i]][go_type].empty()) {
+				prediction.push_back(blast_predictions[gold_protein_id[i]][go_type]);
+				sort(prediction.back().begin(), prediction.back().end(), [](const pair<int, double>& p1, const pair<int, double>& p2) {return p1.second > p2.second; });
+			}
+			else {
+				prediction.push_back({});
+				++no_label_cnt;
+			}
+		}
+		clog << kGoTypeStr[go_type] << " has " << no_label_cnt << " no label predicted" << endl;
+
+		int indexed_cnt = 0;
+		/*for (int i = 0; i < gold_standard.size(); ++i)
+			if (!gold_standard[i].empty())
+				++indexed_cnt;*/
+		clog << "Total " << gold_standard.size() << " protein indexed" << endl;
+		
+		pair<double, double> eva = GetFMeasureMax(gold_standard, prediction);
+		clog << kGoTypeStr[go_type] << " FMax: " << eva.second << ", Thres: " << eva.first << endl;
+	}
+	system("pause");
+}
+
+int main() {
+	//const string kWorkDir = "D:/workspace/cafa/work/";
+	const string kWorkDir = "C:/psw/cafa/CAFA3/work/";
+	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
+	const string kBlastPredictFile = kWorkDir + "group1_test_blast_iter3.txt";
+	const string kTrainProteinSetFile = kWorkDir + "cafa3_train_161222.proteinset";
+	const string kTestProteinSetFile = kWorkDir + "cafa3_test_161222.proteinset";
+
+	//AlignEvaluation();
+	//AlignEvaluationZZH("group1");
+	//return 0;
 	//AlignEvaluation();
 	//return 0;
 
 	GOTermSet go_set;
 	go_set.Load(kGoTermSetFile);
-
 	//go_set.ParseGo("C:/psw/cafa/CAFA3/Ontology/gene_ontology_edit.obo.2016-06-01");
 
 	ProteinSet train_set;
@@ -351,8 +442,8 @@ int main() {
 	ProteinSet test_set;
 	test_set.Load(kTestProteinSetFile);
 
-	//vector<BlastPredictInstance> blast_result = ParseBlastPredictResult(kBlastPredictFile, test_set);
-	vector<BlastPredictInstance> blast_result = ParseBlastPredictXmlResult(kWorkDir + "a5a6187809ace29f9a9100619c0c94a3.xml", test_set);
+	vector<BlastPredictInstance> blast_result = ParseBlastPredictResult(kBlastPredictFile, test_set);
+	//vector<BlastPredictInstance> blast_result = ParseBlastPredictXmlResult(kWorkDir + "a5a6187809ace29f9a9100619c0c94a3.xml", test_set);
 	clog << "Total load " << blast_result.size() << " blast results" << endl;
 
 	for (int go_type = MF; go_type < GO_TYPE_SIZE; ++go_type) {

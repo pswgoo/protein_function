@@ -89,7 +89,7 @@ std::vector<int> GOTermSet::FindAncestors(const std::vector<int>& go_term_ids) c
 	unordered_set<int> ancestors;
 	queue<int> que;
 	for (int g : go_term_ids) {
-		if (ancestors.count(g) == 0 && HasKey(g)) {
+		if (ancestors.count(g) == 0 && HasKey(g) && !QueryGOTerm(g).fathers().empty()) {
 			que.push(g);
 			ancestors.insert(g);
 		}
