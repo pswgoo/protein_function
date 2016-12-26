@@ -213,12 +213,34 @@ void OutputPredictResult(string filename, vector<BlastPredictInstance>& blast_in
 	clog << "Empty gold instance is " << empty_gold_cnt << " / " << blast_instances.size() << endl;
 }
 
+void AlignGoRelation() {
+	const string kWorkDir = "C:/psw/cafa/CAFA3/work/";
+	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
+
+	GOTermSet go_set;
+	go_set.Load(kGoTermSetFile);
+
+	vector<GOTerm> vec_go_terms = go_set.go_terms();
+	sort(vec_go_terms.begin(), vec_go_terms.end(), [](const GOTerm& t1, const GOTerm& t2) {return t1.id() < t2.id(); });
+
+	char buffer[256];
+	ofstream fout("go_rel.txt");
+	for (GOTerm & t : vec_go_terms)
+		for (int f : t.fathers()) {
+			sprintf(buffer, "GO:%07d is_a GO:%07d", t.id(), f);
+			fout << buffer << endl;
+		}
+}
+
 int main() {
 	const string kWorkDir = "C:/psw/cafa/CAFA3/work/";
 	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
 	const string kBlastPredictFile = kWorkDir + "group1_test_blast_iter3.txt";
 	const string kTrainProteinSetFile = kWorkDir + "cafa3_train_161222.proteinset";
 	const string kTestProteinSetFile = kWorkDir + "cafa3_test_161222.proteinset";
+
+	AlignGoRelation();
+	return 0;
 
 	GOTermSet go_set;
 	go_set.Load(kGoTermSetFile);
