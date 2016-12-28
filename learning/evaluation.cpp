@@ -45,7 +45,7 @@ std::pair<double, double> GetFMeasureMax(const std::vector<MultiLabelGoldAnswer>
 				}
 				sum_rec += double(tp_cnt) / gold_standard[i].size();
 			}
-	//	cout << t << " " << sum_pre << " " << m << " " << sum_rec << " " << n << endl;
+		//cout << t << " " << sum_pre << " " << m << " " << sum_rec << " " << n << endl;
 		double pr = sum_pre / m;
 		double rc = sum_rec / n;
 		if (pr + rc > 0) {

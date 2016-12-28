@@ -86,6 +86,6 @@ int ProteinSet::ParseRawTxt(const std::string & sequence_file, const std::string
 			indexed_proteins.push_back(proteins_[i]);
 	if (only_left_indexed)
 		set_proteins(indexed_proteins);
-	clog << "Total parsed " << parsed_cnt << " proteins, " << proteins_.size() << " have go terms" << endl;
+	clog << "Total parsed " << parsed_cnt << " proteins, " << indexed_proteins.size() << " have go terms" << endl;
 	return (int)proteins_.size();
 }

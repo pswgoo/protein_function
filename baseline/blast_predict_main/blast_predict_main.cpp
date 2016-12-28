@@ -59,7 +59,7 @@ vector<BlastPredictInstance> ParseBlastPredictResult(const std::string& filename
 		vector<string> tokens;
 		split(tokens, line, is_any_of("\t"));
 		instance.protein_ = tokens[0];
-		instance.similar_proteins_.push_back(tokens[1]);
+		instance.similar_proteins_.push_back(tokens[1].substr(tokens[1].find("|") + 1));
 		instance.similar_evalues_.push_back(stod(tokens[kEvalueIndex]));
 		instance.similar_bitscore_.push_back(stod(tokens[kBitscoreIndex]));
 		last_line.clear();
@@ -73,7 +73,7 @@ vector<BlastPredictInstance> ParseBlastPredictResult(const std::string& filename
 				last_line = line;
 				break;
 			}
-			instance.similar_proteins_.push_back(tokens[1]);
+			instance.similar_proteins_.push_back(tokens[1].substr(tokens[1].find("|") + 1));
 			instance.similar_evalues_.push_back(stod(tokens[kEvalueIndex]));
 			instance.similar_bitscore_.push_back(stod(tokens[kBitscoreIndex]));
 			//cout << instance.similar_evalues_.back() << ", " << instance.similar_bitscore_.back() << endl;
@@ -121,11 +121,15 @@ vector<BlastPredictInstance> ParseBlastPredictXmlResult(const std::string& xml_f
 			BOOST_FOREACH(const ptree::value_type& v, u.second.get_child("Iteration_hits")) {
 				if (v.first == "Hit") {
 					string neibo_id = v.second.get<string>("Hit_def");
-					double bit_score = v.second.get<double>("Hit_hsps.Hsp.Hsp_bit-score");
-					double evalue = v.second.get<double>("Hit_hsps.Hsp.Hsp_evalue");
-					instance.similar_proteins_.push_back(neibo_id);
-					instance.similar_bitscore_.push_back(bit_score);
-					instance.similar_evalues_.push_back(evalue);
+					BOOST_FOREACH(const ptree::value_type& m, v.second.get_child("Hit_hsps")) {
+						if (m.first == "Hsp") {
+							double bit_score = m.second.get<double>("Hsp_bit-score");
+							double evalue = m.second.get<double>("Hsp_evalue");
+							instance.similar_proteins_.push_back(neibo_id);
+							instance.similar_bitscore_.push_back(bit_score);
+							instance.similar_evalues_.push_back(evalue);
+						}
+					}
 				}
 			}
 			read_instances[instance.protein_] = instance;
@@ -151,18 +155,18 @@ vector<BlastPredictInstance> ParseBlastPredictXmlResult(const std::string& xml_f
 	ofstream fout("yrh_xml_result.bin", ios_base::binary);
 	boost::archive::binary_oarchive oa(fout);
 	oa << ret_instances;
-	fout.close();*/
-	
+	fout.close();
+	*/
 	ifstream fin("yrh_xml_result.bin", ios_base::binary);
 	boost::archive::binary_iarchive ia(fin);
 	ia >> ret_instances;
 	fin.close();
-
+	
 	return ret_instances;
 }
 
 double EvalueToScore(double evalue) {
-	if (evalue > 1e-250) {
+	if (evalue > 0) {
 		return -log10(evalue);
 	}
 	return 250;
@@ -174,15 +178,22 @@ MultiLabelPredictAnswer BlastPredict(const ProteinSet& train_set, const GOTermSe
 		if (max_sim_score.count(test_instance.similar_proteins_[i]) == 0)
 			max_sim_score[test_instance.similar_proteins_[i]] = numeric_limits<double>::lowest();
 		double &ref_score = max_sim_score[test_instance.similar_proteins_[i]];
-		double score = EvalueToScore(test_instance.similar_evalues_[i]);
+		//double score = EvalueToScore(test_instance.similar_evalues_[i]);
+		double score = test_instance.similar_bitscore_[i];
+		//cout << test_instance.similar_proteins_[i] << " " << test_instance.similar_bitscore_[i] << " " << test_instance.similar_evalues_[i] << endl;
 		ref_score = max(ref_score, score);
 	}
 	unordered_map<int, double> label_score;
+	double sum_score = 0;
 	for (auto it = max_sim_score.begin(); it != max_sim_score.end(); ++it) {
 		if (train_set.Has(it->first)) {
 			const Protein &protein = train_set[it->first];
-			vector<int> go_leaves = protein.go_term(go_type);
-			for (int go_id : goterm_set.FindAncestors(go_leaves)) {
+			//if (go_type == MF && protein.go_term(go_type).size() == 1 && protein.go_term(go_type)[0] == 5515)
+			//	continue;
+			vector<int> gos = goterm_set.FindAncestors(protein.go_term(go_type));
+			//cout << it->first << " " << it->second << " " << protein.go_term(go_type).size() << " " << protein.go_term(BP).size() << " " << protein.go_term(CC).size() << endl;
+			sum_score += it->second;
+			for (int go_id : gos) {
 				if (label_score.count(go_id) == 0)
 					label_score[go_id] = it->second;
 				else
@@ -192,9 +203,10 @@ MultiLabelPredictAnswer BlastPredict(const ProteinSet& train_set, const GOTermSe
 		else
 			clog << "Warning: " << it->first << " cannot found in trainset" << endl;
 	}
+	//cout << "SumScore: " << sum_score << endl;
 	MultiLabelPredictAnswer answer;
 	for (auto pr : label_score)
-		answer.push_back(pr);
+		answer.emplace_back(pr.first, pr.second / sum_score);
 	sort(answer.begin(), answer.end(), [](const pair<int, double>& p1, const pair<int, double>& p2) {return p1.second > p2.second; });
 
 	return answer;
@@ -202,7 +214,7 @@ MultiLabelPredictAnswer BlastPredict(const ProteinSet& train_set, const GOTermSe
 
 vector<MultiLabelPredictAnswer> BlastPredict(const ProteinSet& train_set, const GOTermSet& goterm_set, const vector<BlastPredictInstance>& test_instances, GoType go_type) {
 	vector<MultiLabelPredictAnswer> predict_answers(test_instances.size());
-#pragma omp parallel for schedule(dynamic)
+	//#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < test_instances.size(); ++i) {
 		predict_answers[i] = BlastPredict(train_set, goterm_set, test_instances[i], go_type);
 	}
@@ -401,6 +413,10 @@ void AlignEvaluationZZH(string group_name) {
 			if (blast_predictions.count(gold_protein_id[i]) > 0 && !blast_predictions[gold_protein_id[i]][go_type].empty()) {
 				prediction.push_back(blast_predictions[gold_protein_id[i]][go_type]);
 				sort(prediction.back().begin(), prediction.back().end(), [](const pair<int, double>& p1, const pair<int, double>& p2) {return p1.second > p2.second; });
+				if (gold_protein_id[i] == "A0A0R4ICH9") {
+					for (int i = 0; i < prediction.back().size(); ++i)
+						cout << prediction.back()[i].first << " " << prediction.back()[i].second << endl;
+				}
 			}
 			else {
 				prediction.push_back({});
@@ -430,8 +446,8 @@ int main() {
 	const string kTestProteinSetFile = kWorkDir + "cafa3_test_161222.proteinset";
 
 	//AlignEvaluation();
-	//AlignEvaluationZZH("group1");
-	//return 0;
+//	AlignEvaluationZZH("group1");
+//	return 0;
 	//AlignEvaluation();
 	//return 0;
 
@@ -444,8 +460,8 @@ int main() {
 	ProteinSet test_set;
 	test_set.Load(kTestProteinSetFile);
 
-	//vector<BlastPredictInstance> blast_result = ParseBlastPredictResult(kBlastPredictFile, test_set);
-	vector<BlastPredictInstance> blast_result = ParseBlastPredictXmlResult(kWorkDir + "a5a6187809ace29f9a9100619c0c94a3.xml", test_set);
+	vector<BlastPredictInstance> blast_result = ParseBlastPredictResult(kBlastPredictFile, test_set);
+	//vector<BlastPredictInstance> blast_result = ParseBlastPredictXmlResult(kWorkDir + "a5a6187809ace29f9a9100619c0c94a3.xml", test_set);
 	clog << "Total load " << blast_result.size() << " blast results" << endl;
 
 	for (int go_type = MF; go_type < GO_TYPE_SIZE; ++go_type) {
