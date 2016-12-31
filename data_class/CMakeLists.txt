@@ -1,8 +1,10 @@
 set(data_class_SRCS
-  protein_sequence.cpp
-  protein_sequence.h
-  go_term.cpp
-  go_term.h
+	protein_sequence.cpp
+	protein_sequence.h
+	go_term.cpp
+	go_term.h
+	protein_profile.h
+	protein_profile.cpp
 )
 
 add_source_groups(${data_class_SRCS})

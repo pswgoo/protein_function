@@ -271,13 +271,6 @@ void AlignGoRelation() {
 		}
 }
 
-GoType GoTypeStrToTypeId(string type_str) {
-	for (int i = MF; i < GO_TYPE_SIZE; ++i)
-		if (kGoTypeStr[i] == type_str)
-			return (GoType)i;
-	return GO_TYPE_SIZE;
-}
-
 void AlignEvaluation() {
 	//const string kWorkDir = "D:/workspace/cafa/work/";
 	const string kWorkDir = "C:/psw/cafa/CAFA3/work/";

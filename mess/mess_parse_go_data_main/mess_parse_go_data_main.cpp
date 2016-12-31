@@ -9,11 +9,23 @@
 
 #include "data_class/go_term.h"
 #include "data_class/protein_sequence.h"
+#include "data_class/protein_profile.h"
 
 using namespace std;
 
 int main() {
 	const string kWorkDir = "C:/psw/cafa/CAFA3/"; // C:/psw/cafa/CAFA3/work/
+
+	ProteinProfileSet profile_set;
+
+	profile_set.ParseUniprotXml("uniprot_sprot_201501.xml");
+	profile_set.Save("uniprot_sprot_201501.profile_set");
+
+	profile_set.Load("uniprot_sprot_201501.profile_set");
+	profile_set.Save("tmp.profile_set");
+
+	profile_set.Print("uniprot_sprot_201501.txt");
+	return 0;
 
 	GOTermSet go_term_set;
 	go_term_set.ParseGo(kWorkDir + "Ontology/gene_ontology_edit.obo.2016-06-01");

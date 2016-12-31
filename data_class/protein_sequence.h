@@ -99,3 +99,10 @@ private:
 	std::vector<Protein> proteins_;
 	std::unordered_map<std::string, int> protein_indices_;
 };
+
+inline GoType GoTypeStrToTypeId(std::string type_str) {
+	for (int i = MF; i < GO_TYPE_SIZE; ++i)
+		if (kGoTypeStr[i] == type_str)
+			return (GoType)i;
+	return GO_TYPE_SIZE;
+}
