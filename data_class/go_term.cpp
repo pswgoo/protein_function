@@ -131,3 +131,41 @@ std::vector<int> GOTermSet::FindAncestors(const std::vector<int>& go_term_ids) c
 //	clog << "gold ancestors.size = " << ancestors.size() << endl;
 	return ret_ancestor;
 }
+
+vector<pair<int, double>> GOTermSet::ScoreAncestors(const std::vector<float>& vec_scores, float cutoff) const {
+	unordered_map<int, double> scores;
+	unordered_set<int> visited;
+	queue<int> que;
+	vector<bool> is_leaf(go_terms().size(), true);
+	for (int i = 0; i < go_terms().size(); ++i)
+		for (int f : go_terms()[i].fathers())
+			is_leaf[go_term_index_.at(f)] = false;
+	for (int i = 0; i < is_leaf.size(); ++i) {
+		scores[go_terms()[i].id()] = vec_scores[i];
+		if (is_leaf[i]) {
+			que.push(go_terms()[i].id());
+			visited.insert(go_terms()[i].id());
+		}
+	}
+
+	while (!que.empty()) {
+		int top = que.front();
+		que.pop();
+		if (HasKey(top)) {
+			double top_score = scores[top];
+			for (int f : QueryGOTerm(top).fathers())
+				if (HasKey(f) && !QueryGOTerm(f).fathers().empty() && (visited.count(f) == 0 || scores[f] < top_score)) {
+					scores[f] = max(top_score, scores[f]);
+					que.push(f);
+					visited.insert(f);
+				}
+		}
+	}
+
+	vector<pair<int, double>> ret;
+	for (const pair<int, double>& pr : scores)
+		if (pr.second > cutoff)
+			ret.push_back(pr);
+
+	return ret;
+}

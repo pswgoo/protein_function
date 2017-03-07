@@ -54,20 +54,17 @@ void StatisticGoSet(const GOTermSet& go_set) {
 }
 
 void AnotatedStatistic(const GOTermSet& go_set, const ProteinSet & train_set) {
-	map<int, int> go_indexing_cnt[GO_TYPE_SIZE];
+	map<int, int> go_indexing_cnt;
 	for (int i = 0; i < train_set.Size(); ++i) {
-		for (int go_type = 0; go_type < GO_TYPE_SIZE; ++go_type) {
-			vector<int> indexed_gos = go_set.FindAncestors(train_set[i].go_term(GoType(go_type)));
-			for (int g : indexed_gos)
-				go_indexing_cnt[go_type][g]++;
-		}
+		vector<int> indexed_gos = go_set.FindAncestors(train_set[i].all_go_terms());
+		for (int g : indexed_gos)
+			go_indexing_cnt[g]++;
 	}
 
-	ofstream fout("go_train_instance_count.csv");
+	ofstream fout("go_test_instance_count.csv");
 	fout << "go_id,go_type,instance_count" << endl;
-	for (int go_type = 0; go_type < GO_TYPE_SIZE; ++go_type)
-		for (pair<int, int> pr : go_indexing_cnt[go_type])
-			fout << pr.first << "," << kGoTypeStr[go_type] << "," << pr.second << endl;
+	for (pair<int, int> pr : go_indexing_cnt)
+		fout << pr.first << "," << go_set.QueryGOTerm(pr.first).type() << "," << pr.second << endl;
 }
 
 void PmidStatistic(const ProteinProfileSet& profile_set, const ProteinSet& train_set) {
@@ -106,6 +103,19 @@ void CountSequenceLengthAnotationNum(const GOTermSet& go_set, const ProteinSet &
 		<< go_set.FindAncestors(train_set[i].go_term(CC)).size() << "," << endl;
 }
 
+void Print(const GOTermSet& go_set, const ProteinSet& proteins, string file_name) {
+	ofstream fout(file_name);
+	for (int i = 0; i < proteins.Size(); ++i) {
+		fout << proteins[i].id_;
+		vector<int> all_go = go_set.FindAncestors(proteins[i].all_go_terms());
+		sort(all_go.begin(), all_go.end());
+		for (int go : all_go)
+			fout << " " << go;
+		fout << endl;
+		fout << proteins[i].sequence_ << endl << endl;
+	}
+}
+
 int main() {
 	const string kWorkDir = "C:/psw/cafa/protein_cafa2/work/";
 	//const string kWorkDir = "C:/psw/cafa/CAFA3/work/"; // C:/psw/cafa/CAFA3/work/
@@ -130,6 +140,14 @@ int main() {
 	clog << "GoSet.min id: " << mn_id << endl;
 	clog << "GoSet.max id: " << mx_id << endl;
 	AnotatedStatistic(go_set, train_set);
+	
+	int cnt = 0;
+	for (int i = 0; i < train_set.Size(); ++i) {
+		if (train_set[i].sequence_.find("ARR") != string::npos)
+			++cnt;
+	}
+	clog << cnt << "/" << train_set.Size() << endl;
+	Print(go_set, train_set, "test_info.txt");
 	return 0;
 
 	//StatisticGoSet(go_set);

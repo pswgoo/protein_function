@@ -60,6 +60,7 @@ private:
 class GOTermSet {
 public:
 	std::vector<int> FindAncestors(const std::vector<int>& go_term_ids) const;
+	std::vector<std::pair<int,double>> ScoreAncestors(const std::vector<float>& vec_scores, float cutoff = 1e-3) const;
 	
 	std::vector<int> ToAnnotationVector(std::vector<int>& go_term_ids) const;
 	std::vector<int> ToGoIds(std::vector<int>& go_annotation_vector) const;
