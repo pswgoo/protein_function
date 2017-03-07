@@ -98,6 +98,9 @@ size_t ProteinProfileSet::ParseUniprotXml(const std::string& xml_file) {
 	const string kXmlHead = "<entry ";
 	const string kXmlTail = "</entry>";
 
+	protein_profiles_.clear();
+	protein_indices_.clear();
+
 	ifstream fin(xml_file);
 	string line;
 	string xml_str;
@@ -141,12 +144,16 @@ size_t ProteinProfileSet::ParseUniprotXml(const std::string& xml_file) {
 	if (success_cnt != protein_profiles_.size())
 		cerr << "Error: success_cnt != protein_profiles_.size()" << endl;
 
+	for (int i = 0; i < protein_profiles_.size(); ++i)
+		for (int j = 0; j < protein_profiles_[i].accessions().size(); ++j)
+			protein_indices_[protein_profiles_[i].accessions()[j]] = i;
+
 	clog << "Total loaded " << success_cnt << " instances successfully" << endl;
 	return success_cnt;
 }
 
 void ProteinProfileSet::Save(const std::string& file_name) const {
-	ofstream fout(file_name);
+	ofstream fout(file_name, ios::binary);
 	boost::archive::binary_oarchive oa(fout);
 	oa << *this;
 	fout.close();
@@ -156,7 +163,7 @@ size_t ProteinProfileSet::Load(const std::string& file_name) {
 	protein_profiles_.clear();
 	protein_indices_.clear();
 
-	ifstream fin(file_name);
+	ifstream fin(file_name, ios::binary);
 	boost::archive::binary_iarchive ia(fin);
 	ia >> *this;
 	fin.close();

@@ -42,6 +42,12 @@ const std::string kGoTypeStr[] = { "molecular_function", "biological_process", "
 
 struct Protein {
 
+	std::vector<int> all_go_terms() const {
+		std::vector<int> ret(go_terms_[MF]);
+		ret.insert(ret.end(), go_terms_[BP].begin(), go_terms_[BP].end());
+		ret.insert(ret.end(), go_terms_[CC].begin(), go_terms_[CC].end());
+		return ret;
+	}
 	const std::vector<int>& go_term(GoType go_type) const {
 		return go_terms_[go_type];
 	}
@@ -57,10 +63,14 @@ struct Protein {
 		go_terms_.resize(GoType::GO_TYPE_SIZE);
 	}
 
+	bool Indexed() const { return !go_terms_[MF].empty() || !go_terms_[BP].empty() || !go_terms_[CC].empty(); }
+
 	std::string id_;
 	std::string sequence_;
 	std::vector<std::vector<int>> go_terms_;
 };
+
+class GOTermSet;
 
 class ProteinSet {
 
@@ -75,6 +85,8 @@ public:
 	const Protein& operator[](int idx) const { return proteins_[idx]; }
 
 	int ParseRawTxt(const std::string& sequence_file, const std::string& mf_go_file, const std::string& bp_go_file, const std::string& cc_go_file, bool only_left_indexed = true);
+
+	int ParseRawTxt(const GOTermSet& go_set, const std::string& sequence_file, const std::string& annotation_file, bool only_left_indexed = true);
 
 	void Save(const std::string& file_name) const;
 

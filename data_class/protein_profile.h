@@ -79,12 +79,14 @@ public:
 	void Save(const std::string& file_name) const;
 	std::size_t Load(const std::string& file_name);
 
-	bool Has(const std::string &name) {
+	bool Has(const std::string &name) const {
 		if (protein_indices_.count(name) > 0)
 			return true;
 		else
 			return false;
 	}
+
+	const ProteinProfile& Query(const std::string& accession) const { return protein_profiles_.at(protein_indices_.at(accession)); }
 
 	void ProteinProfileSet::Print(const std::string& file_name) const {
 		std::ofstream fout(file_name);

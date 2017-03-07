@@ -59,7 +59,7 @@ vector<BlastPredictInstance> ParseBlastPredictResult(const std::string& filename
 		vector<string> tokens;
 		split(tokens, line, is_any_of("\t"));
 		instance.protein_ = tokens[0];
-		instance.similar_proteins_.push_back(tokens[1].substr(tokens[1].find("|") + 1));
+		instance.similar_proteins_.push_back(tokens[1]);
 		instance.similar_evalues_.push_back(stod(tokens[kEvalueIndex]));
 		instance.similar_bitscore_.push_back(stod(tokens[kBitscoreIndex]));
 		last_line.clear();
@@ -73,7 +73,7 @@ vector<BlastPredictInstance> ParseBlastPredictResult(const std::string& filename
 				last_line = line;
 				break;
 			}
-			instance.similar_proteins_.push_back(tokens[1].substr(tokens[1].find("|") + 1));
+			instance.similar_proteins_.push_back(tokens[1]);
 			instance.similar_evalues_.push_back(stod(tokens[kEvalueIndex]));
 			instance.similar_bitscore_.push_back(stod(tokens[kBitscoreIndex]));
 			//cout << instance.similar_evalues_.back() << ", " << instance.similar_bitscore_.back() << endl;
@@ -226,7 +226,7 @@ vector<MultiLabelGoldAnswer> GetGroundTruth(const GOTermSet& goterm_set, const P
 	vector<MultiLabelGoldAnswer> ret;
 	for (int i = 0; i < test_set.Size(); ++i) {
 		vector<int> gos = goterm_set.FindAncestors(test_set[i].go_term(go_type));
-		ret.push_back({gos.begin(), gos.end()});
+		ret.emplace_back(gos.begin(), gos.end());
 	}
 	return ret;
 }
@@ -432,11 +432,17 @@ void AlignEvaluationZZH(string group_name) {
 
 int main() {
 	//const string kWorkDir = "D:/workspace/cafa/work/";
-	const string kWorkDir = "./"; // C:/psw/cafa/CAFA3/work/
+	const string kWorkDir = "C:/psw/cafa/protein_cafa2/work/"; // C:/psw/cafa/CAFA3/work/
+/*
 	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
 	const string kBlastPredictFile = kWorkDir + "group1_test_blast_iter3.txt";
 	const string kTrainProteinSetFile = kWorkDir + "cafa3_train_161222.proteinset";
 	const string kTestProteinSetFile = kWorkDir + "cafa3_test_161222.proteinset";
+*/
+	const string kGoTermSetFile = kWorkDir + "go_140101.gotermset";
+	const string kBlastPredictFile = kWorkDir + "../data/CAFA2_201401.outfmt6";
+	const string kTrainProteinSetFile = kWorkDir + "cafa2_train_170307.proteinset";
+	const string kTestProteinSetFile = kWorkDir + "cafa2_test_170307.proteinset";
 
 	//AlignEvaluation();
 //	AlignEvaluationZZH("group1");

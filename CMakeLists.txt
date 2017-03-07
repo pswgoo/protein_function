@@ -27,7 +27,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 endif()
 
-include_directories(${root_SOURCE_DIR} ./)
+include_directories(${root_SOURCE_DIR} ./ ./graynet)
 link_directories(/usr/local/lib)
 
 add_subdirectory(common)
@@ -38,3 +38,4 @@ add_subdirectory(data_processing)
 add_subdirectory(learning)
 add_subdirectory(mess)
 add_subdirectory(baseline)
+add_subdirectory(graynet)

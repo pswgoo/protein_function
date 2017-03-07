@@ -17,6 +17,24 @@
 using namespace std;
 using namespace boost;
 
+std::vector<int> GOTermSet::ToAnnotationVector(std::vector<int>& go_term_ids) const {
+	vector<int> ret(go_terms_.size(), 0);
+	for (int go : go_term_ids)
+		if (go_term_index_.count(go) > 0)
+			ret[go_term_index_.at(go)] = 1;
+		else
+			cerr << "GO: " << go << " not found" << endl;
+	return ret;
+}
+
+std::vector<int> GOTermSet::ToGoIds(std::vector<int>& go_annotation_vector) const {
+	vector<int> ret;
+	for (int i = 0; i < go_annotation_vector.size(); ++i)
+		if (go_annotation_vector[i] > 0)
+			ret.push_back(go_terms_[i].id());
+	return ret;
+}
+
 size_t GOTermSet::ParseGo(const std::string& go_file) {
 	const int kGOIdLength = 7;
 	ifstream fin(go_file);

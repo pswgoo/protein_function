@@ -12,6 +12,8 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
+#include "go_term.h"
+
 using namespace std;
 using namespace boost;
 
@@ -89,3 +91,45 @@ int ProteinSet::ParseRawTxt(const std::string & sequence_file, const std::string
 	clog << "Total parsed " << parsed_cnt << " proteins, " << indexed_proteins.size() << " have go terms" << endl;
 	return (int)proteins_.size();
 }
+
+int ProteinSet::ParseRawTxt(const GOTermSet& go_set, const std::string& sequence_file, const std::string& annotation_file, bool only_left_indexed) {
+	ifstream fin(sequence_file);
+
+	string line;
+	while (fin.peek() == '>') {
+		getline(fin, line);
+		string id = line.substr(1);
+		string seq;
+		while (fin.peek() != '>' && fin.peek() != std::char_traits<char>::eof()) {
+			getline(fin, line);
+			seq += line;
+		}
+		seq = RemoveSpace(seq);
+		protein_indices_[id] = (int)proteins_.size();
+		proteins_.push_back(Protein(id, seq));
+	}
+
+	ifstream in(annotation_file);
+	string p_id, go;
+	while (in >> p_id >> go) {
+		if (protein_indices_.count(p_id) > 0) {
+			go = go.substr(1 + go.find(":"));
+			int go_id = stoi(go);
+			if (go_set.HasKey(go_id)) {
+				string type = go_set.QueryGOTerm(go_id).type();
+				proteins_[protein_indices_.at(p_id)].go_terms_[GoTypeStrToTypeId(type)].push_back(go_id);
+			}
+		}
+	}
+
+	int parsed_cnt = (int)proteins_.size();
+	vector<Protein> indexed_proteins;
+	for (int i = 0; i < proteins_.size(); ++i)
+		if (!proteins_[i].go_terms_[MF].empty() || !proteins_[i].go_terms_[BP].empty() || !proteins_[i].go_terms_[CC].empty())
+			indexed_proteins.push_back(proteins_[i]);
+	if (only_left_indexed)
+		set_proteins(indexed_proteins);
+	clog << "Total parsed " << parsed_cnt << " proteins, " << indexed_proteins.size() << " have go terms" << endl;
+	return (int)proteins_.size();
+}
+

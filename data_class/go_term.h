@@ -61,6 +61,9 @@ class GOTermSet {
 public:
 	std::vector<int> FindAncestors(const std::vector<int>& go_term_ids) const;
 	
+	std::vector<int> ToAnnotationVector(std::vector<int>& go_term_ids) const;
+	std::vector<int> ToGoIds(std::vector<int>& go_annotation_vector) const;
+
 	bool HasKey(int go_id) const { return go_term_index_.count(go_id) > 0; }
 
 	const GOTerm& QueryGOTerm(int go_id) const {
@@ -72,6 +75,13 @@ public:
 	void Save(const std::string& file_name) const;
 
 	std::size_t Load(const std::string& file_name);
+
+	int GetIndex(int go_id) const {
+		if (go_term_index_.count(go_id) > 0)
+			return (int)go_term_index_.at(go_id);
+		else
+			return -1;
+	}
 
 	int update_date() const { return update_date_; }
 	void set_update_date(int update_date) { update_date_ = update_date; }
