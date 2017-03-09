@@ -61,7 +61,7 @@ void AnotatedStatistic(const GOTermSet& go_set, const ProteinSet & train_set) {
 			go_indexing_cnt[g]++;
 	}
 
-	ofstream fout("go_test_instance_count.csv");
+	ofstream fout("go_train_instance_count_cafa3.csv");
 	fout << "go_id,go_type,instance_count" << endl;
 	for (pair<int, int> pr : go_indexing_cnt)
 		fout << pr.first << "," << go_set.QueryGOTerm(pr.first).type() << "," << pr.second << endl;
@@ -94,7 +94,7 @@ void PmidStatistic(const ProteinProfileSet& profile_set, const ProteinSet& train
 }
 
 void CountSequenceLengthAnotationNum(const GOTermSet& go_set, const ProteinSet & train_set) {
-	ofstream fout("sequence_annation.csv");
+	ofstream fout("sequence_annation_cafa3_train.csv");
 	fout << "id,sequence length,mf count,bp count,cc count" << endl;
 	for (int i = 0; i < train_set.Size(); ++i)
 		fout << train_set[i].id_ <<"," << train_set[i].sequence_.size() << "," 
@@ -117,8 +117,8 @@ void Print(const GOTermSet& go_set, const ProteinSet& proteins, string file_name
 }
 
 int main() {
-	const string kWorkDir = "C:/psw/cafa/protein_cafa2/work/";
-	//const string kWorkDir = "C:/psw/cafa/CAFA3/work/"; // C:/psw/cafa/CAFA3/work/
+	//const string kWorkDir = "C:/psw/cafa/protein_cafa2/work/";
+	const string kWorkDir = "C:/psw/cafa/CAFA3/work/"; // C:/psw/cafa/CAFA3/work/
 	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
 	const string kBlastPredictFile = kWorkDir + "group1_test_blast_iter3.txt";
 	const string kTrainProteinSetFile = kWorkDir + "cafa3_train_161222.proteinset";
@@ -126,10 +126,10 @@ int main() {
 	const string kProteinProfileSetFile = kWorkDir + "uniprot_sprot_201610.profileset";
 
 	GOTermSet go_set;
-	go_set.Load(kWorkDir + "go_140101.gotermset");
+	go_set.Load(kGoTermSetFile);
 
 	ProteinSet train_set;
-	train_set.Load(kWorkDir + "cafa2_train_170307.proteinset");
+	train_set.Load(kTrainProteinSetFile); //"cafa2_train_170307.proteinset"
 
 	int mn_id = 1000000, mx_id = -1;
 	for (int i = 0; i < go_set.go_terms().size(); ++i) {
@@ -139,22 +139,23 @@ int main() {
 	clog << "GoSet.size: " << go_set.go_terms().size() << endl;
 	clog << "GoSet.min id: " << mn_id << endl;
 	clog << "GoSet.max id: " << mx_id << endl;
-	AnotatedStatistic(go_set, train_set);
+	//AnotatedStatistic(go_set, train_set);
 	
 	int cnt = 0;
+	ofstream fout("cys_cnt_cafa3.csv");
 	for (int i = 0; i < train_set.Size(); ++i) {
-		if (train_set[i].sequence_.find("ARR") != string::npos)
+		fout << count(train_set[i].sequence_.begin(), train_set[i].sequence_.end(), 'C') << endl;
+		if (train_set[i].sequence_.find("LALL") != string::npos || train_set[i].sequence_.find("QQLL") != string::npos || train_set[i].sequence_.find("SSP") != string::npos)
 			++cnt;
 	}
 	clog << cnt << "/" << train_set.Size() << endl;
-	Print(go_set, train_set, "test_info.txt");
+	//Print(go_set, train_set, "test_info_cafa3.txt");
+	//CountSequenceLengthAnotationNum(go_set, train_set);
 	return 0;
 
 	//StatisticGoSet(go_set);
 	//return 0;
 
-	CountSequenceLengthAnotationNum(go_set, train_set);
-	return 0;
 
 	ProteinProfileSet profile_set;
 	profile_set.Load(kProteinProfileSetFile);

@@ -30,13 +30,14 @@ void ExtractBatch(const GOTermSet& go_set, const ProteinSet& proteins, const vec
 		vector<int> go_ids = go_set.FindAncestors(proteins[indices[i]].all_go_terms());
 		for (int go : go_ids) {
 			int idx = go_set.GetIndex(go);
-			if (idx >= 0)
-				output_label[i * nr_class + idx] = 1.0f;
-				/*if (go == 43226)
-				output_label[i * nr_class] = 1;*/
+			/*if (idx >= 0)
+				output_label[i * nr_class + idx] = 1.0f;*/
+			//if (go == 5737) // 16323
+			//	output_label[i * nr_class] = 1;
 		}
 		
-		//output_label[i * nr_class] = seq.find("ARR") != string::npos;
+		output_label[i * nr_class] = (seq.find("LALL") != string::npos || seq.find("QQLL") != string::npos || seq.find("SSP") != string::npos);
+		//output_label[i * nr_class] = count(seq.begin(), seq.end(), 'C') > 15; //seq.find("ARR") != string::npos;
 	}
 }
 
@@ -48,12 +49,14 @@ Expression Model(Expression t, int nr_class, bool is_train = false) {
 	t = MaxPooling(t, Shape(1, 2), Shape(1, 2), Shape(0, 0)); // 219
 	t = ReLU(ConvolutionLayer("conv3", t, 160, Shape(1, 5), Shape(1, 1), Shape(0, 0)));
 	t = MaxPooling(t, Shape(1, 2), Shape(1, 2), Shape(0, 0)); // 106
-	t = ReLU(ConvolutionLayer("conv4", t, 320, Shape(1, 9), Shape(1, 1), Shape(0, 0)));
+	t = ReLU(ConvolutionLayer("conv4", t, 320, Shape(1, 5), Shape(1, 1), Shape(0, 0)));
 	t = MaxPooling(t, Shape(1, 2), Shape(1, 2), Shape(0, 0)); // 49
+	//t = ReLU(ConvolutionLayer("conv5", t, 320, Shape(1, 5), Shape(1, 1), Shape(0, 0)));
+	//t = MaxPooling(t, Shape(1, 2), Shape(1, 1), Shape(0, 0)); // 49
 	t = Flatten(t);
 	t = ReLU(LinearLayer("l1", t, 200));
-	if (is_train)
-		t = Dropout(t, 0.5);
+	//if (is_train)
+	//	t = Dropout(t, 0.5);
 	t = Sigmoid(LinearLayer("l2", t, nr_class));
 	return t;
 }
@@ -90,10 +93,14 @@ void Debug(const GOTermSet& go_set, const ProteinSet& test_set) {
 int main() {
 	//const string kWorkDir = "C:/psw/cafa/protein_cafa2/work/";
 	const string kWorkDir = "./";
-
+/*
 	const string kGoTermSetFile = kWorkDir + "go_140101.gotermset";
 	const string kTrainProteinSetFile = kWorkDir + "cafa2_train_170307.proteinset";
 	const string kTestProteinSetFile = kWorkDir + "cafa2_test_170307.proteinset";
+*/
+	const string kGoTermSetFile = kWorkDir + "go_160601.gotermset";
+	const string kTrainProteinSetFile = kWorkDir + "cafa3_train_161222.proteinset";
+	const string kTestProteinSetFile = kWorkDir + "cafa3_test_161222.proteinset";
 
 	GOTermSet go_set;
 	go_set.Load(kGoTermSetFile);
@@ -117,13 +124,13 @@ int main() {
 	Device device(GPU);
 	Graph graph(&device);
 	graph.SetRandomSeed(0);
-	SGDOptimizer optimizer(&graph, 0.001f);
+	SGDOptimizer optimizer(&graph, 0.01f);
 
 	vector<float> train_batch_data;
 	vector<float> train_batch_label;
 
 	double total_loss = 0;
-	int nr_class = (int)go_set.go_terms().size();
+	int nr_class = 1; //(int)go_set.go_terms().size();
 	double acc_sum = 0.0;
 	for (int e = 0; e < kEpochNumber; ++e) {
 		total_loss = 0;
@@ -133,30 +140,30 @@ int main() {
 		for (int b = 0; b < indices.size(); b += batch_size) {
 			if (b % 4000 == 0 && b != 0) {
 				cout << "Epoch " << e << " batch " << b << " Loss: " << total_loss / b  << ", Acc:" << acc_sum / b << endl;
-				//vector<float> test_batch_data;
-				//vector<float> test_batch_label;
+				vector<float> test_batch_data;
+				vector<float> test_batch_label;
 
-				//int tp = 0, tn = 0;
-				//float sum_ans = 0;
-				//float mn_ans = 1000;
-				//float mx_ans = -1;
-				//for (int i = 0; i < test_set.Size(); ++i) {
-				//	ExtractBatch(go_set, test_set, { i }, nr_class, test_batch_data, test_batch_label);
-				//	Expression t = BatchInput(&graph, 1, Shape(kAminoTypeSize, kMaxSequenceLength), test_batch_data.data());
-				//	t = Model(t, nr_class);
-				//	vector<float> ans(nr_class);
-				//	t.Forward().GetValue(ans.data());
-				//	//int p = rand() % 10;
-				//	if (test_batch_label[0] > 0.5 && ans[0] > 0.5)
-				//		++tp;
-				//	else if (test_batch_label[0] < 0.5 && ans[0] < 0.5)
-				//		++tn;
-				//	sum_ans += ans[0];
-				//	mn_ans = min(mn_ans, ans[0]);
-				//	mx_ans = max(mx_ans, ans[0]);
-				//}
-				//clog << "Accuracy: " << float(tp + tn) / test_set.Size() << ", avg ans: " << sum_ans / test_set.Size() << ", mn_ans:" << mn_ans << ", mx_ans: "<< mx_ans << endl;
-
+				int tp = 0, tn = 0;
+				float sum_ans = 0;
+				float mn_ans = 1000;
+				float mx_ans = -1;
+				for (int i = 0; i < test_set.Size(); ++i) {
+					ExtractBatch(go_set, test_set, { i }, nr_class, test_batch_data, test_batch_label);
+					Expression t = BatchInput(&graph, 1, Shape(kAminoTypeSize, kMaxSequenceLength), test_batch_data.data());
+					t = Model(t, nr_class);
+					vector<float> ans(nr_class);
+					t.Forward().GetValue(ans.data());
+					//int p = rand() % 10;
+					if (test_batch_label[0] > 0.5 && ans[0] > 0.5)
+						++tp;
+					else if (test_batch_label[0] < 0.5 && ans[0] < 0.5)
+						++tn;
+					sum_ans += ans[0];
+					mn_ans = min(mn_ans, ans[0]);
+					mx_ans = max(mx_ans, ans[0]);
+				}
+				clog << "Accuracy: " << float(tp + tn) / test_set.Size() << ", avg ans: " << sum_ans / test_set.Size() << ", mn_ans:" << mn_ans << ", mx_ans: "<< mx_ans << endl;
+/*
 				vector<float> test_batch_data;
 				vector<float> test_batch_label;
 				vector<MultiLabelPredictAnswer> prediction[GO_TYPE_SIZE];
@@ -174,7 +181,7 @@ int main() {
 					pair<double, double> eva = GetFMeasureMax(ground_truth[i], prediction[i]);
 					cout << "Epoch: " << e << " " << kGoTypeStr[i] << " FMax: " << eva.second << ", Thres: " << eva.first << endl;
 					clog << "Epoch: " << e << " " << kGoTypeStr[i] << " FMax: " << eva.second << ", Thres: " << eva.first << endl;
-				}
+				}*/
 			}
 			int len = (b + batch_size >= indices.size()) ? ((int)indices.size() - b) : batch_size;
 			ExtractBatch(go_set, train_set, { indices.begin() + b, indices.begin() + b + len }, nr_class, train_batch_data, train_batch_label);
@@ -194,7 +201,7 @@ int main() {
 		}
 
 		std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-		std::cout << e << " Loss: " << total_loss / train_set.Size();
+		std::cout << e << " Loss: " << total_loss / train_set.Size() << endl;
 		graph.Save(("epoch" + to_string(e) + ".model").c_str());
 	}
 
